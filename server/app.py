@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""CrossFit WOD 클라우드 동기화 서버"""
+
+import json
+import os
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import urlparse, parse_qs
+import threading
+
+DATA_FILE = os.path.join(os.path.dirname(__file__), 'user_data.json')
+
+# 데이터 저장소 초기화
+def load_data():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {}
+
+def save_data(data):
+    with open(DATA_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+# 전역 데이터 저장소
+user_data = load_data()
+data_lock = threading.Lock()
+
+class RequestHandler(BaseHTTPRequestHandler):
+    def _set_headers(self, status=200, content_type='application/json'):
+        self.send_response(status)
+        self.send_header('Content-Type', content_type)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+
+    def do_OPTIONS(self):
+        self._set_headers()
+
+    def do_GET(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+        query = parse_qs(parsed.query)
+
+        # 사용자 데이터 조회
+        if path == '/api/user':
+            nickname = query.get('nickname', [None])[0]
+            if not nickname:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({'error': 'nickname required'}).encode())
+                return
+
+            with data_lock:
+                data = user_data.get(nickname, {
+                    'nickname': nickname,
+                    'workoutRecords': [],
+                    'personalRecords': [],
+                    'createdAt': None
+                })
+
+            self._set_headers()
+            self.wfile.write(json.dumps(data, ensure_ascii=False).encode())
+
+        # 닉네임 존재 확인
+        elif path == '/api/check':
+            nickname = query.get('nickname', [None])[0]
+            if not nickname:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({'error': 'nickname required'}).encode())
+                return
+
+            with data_lock:
+                exists = nickname in user_data
+
+            self._set_headers()
+            self.wfile.write(json.dumps({'exists': exists}).encode())
+
+        # 전체 사용자 목록 (닉네임만)
+        elif path == '/api/users':
+            with data_lock:
+                nicknames = list(user_data.keys())
+
+            self._set_headers()
+            self.wfile.write(json.dumps({'users': nicknames}).encode())
+
+        else:
+            self._set_headers(404)
+            self.wfile.write(json.dumps({'error': 'not found'}).encode())
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+
+        content_length = int(self.headers.get('Content-Length', 0))
+        body = self.rfile.read(content_length).decode('utf-8')
+
+        try:
+            data = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            self._set_headers(400)
+            self.wfile.write(json.dumps({'error': 'invalid JSON'}).encode())
+            return
+
+        # 사용자 생성/업데이트
+        if path == '/api/user':
+            nickname = data.get('nickname')
+            if not nickname:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({'error': 'nickname required'}).encode())
+                return
+
+            with data_lock:
+                if nickname not in user_data:
+                    from datetime import datetime
+                    user_data[nickname] = {
+                        'nickname': nickname,
+                        'workoutRecords': [],
+                        'personalRecords': [],
+                        'createdAt': datetime.now().isoformat()
+                    }
+                save_data(user_data)
+
+            self._set_headers()
+            self.wfile.write(json.dumps({'success': True, 'nickname': nickname}).encode())
+
+        # 운동 기록 동기화
+        elif path == '/api/sync/workouts':
+            nickname = data.get('nickname')
+            records = data.get('records', [])
+
+            if not nickname:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({'error': 'nickname required'}).encode())
+                return
+
+            with data_lock:
+                if nickname not in user_data:
+                    self._set_headers(404)
+                    self.wfile.write(json.dumps({'error': 'user not found'}).encode())
+                    return
+
+                # 기존 기록과 병합 (ID 기준 중복 제거)
+                existing = {r['id']: r for r in user_data[nickname].get('workoutRecords', [])}
+                for record in records:
+                    existing[record['id']] = record
+                user_data[nickname]['workoutRecords'] = list(existing.values())
+                save_data(user_data)
+
+                result = user_data[nickname]['workoutRecords']
+
+            self._set_headers()
+            self.wfile.write(json.dumps({'success': True, 'records': result}, ensure_ascii=False).encode())
+
+        # PR 동기화
+        elif path == '/api/sync/pr':
+            nickname = data.get('nickname')
+            records = data.get('records', [])
+
+            if not nickname:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({'error': 'nickname required'}).encode())
+                return
+
+            with data_lock:
+                if nickname not in user_data:
+                    self._set_headers(404)
+                    self.wfile.write(json.dumps({'error': 'user not found'}).encode())
+                    return
+
+                # 기존 기록과 병합
+                existing = {r['id']: r for r in user_data[nickname].get('personalRecords', [])}
+                for record in records:
+                    existing[record['id']] = record
+                user_data[nickname]['personalRecords'] = list(existing.values())
+                save_data(user_data)
+
+                result = user_data[nickname]['personalRecords']
+
+            self._set_headers()
+            self.wfile.write(json.dumps({'success': True, 'records': result}, ensure_ascii=False).encode())
+
+        else:
+            self._set_headers(404)
+            self.wfile.write(json.dumps({'error': 'not found'}).encode())
+
+    def log_message(self, format, *args):
+        print(f"[API] {args[0]}")
+
+def run_server(port=8888):
+    server = HTTPServer(('0.0.0.0', port), RequestHandler)
+    print(f"서버 시작: http://localhost:{port}")
+    server.serve_forever()
+
+if __name__ == '__main__':
+    run_server()
