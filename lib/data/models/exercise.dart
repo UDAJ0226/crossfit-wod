@@ -167,17 +167,20 @@ class WodExercise extends HiveObject {
   /// 운동 설명 문자열 생성
   String get displayText {
     final buffer = StringBuffer();
-    buffer.write('$reps ');
 
-    if (duration != null) {
-      buffer.write('초 ');
+    // Tabata: duration 기반 표시 (reps가 0일 때)
+    if (duration != null && reps == 0) {
+      buffer.write('$duration초 ${exercise.name}');
     } else if (distance != null) {
-      buffer.write('m ');
+      // 거리 기반 운동
+      buffer.write('$distance m ${exercise.name}');
     } else if (calories != null) {
-      buffer.write('cal ');
+      // 칼로리 기반 운동
+      buffer.write('$calories cal ${exercise.name}');
+    } else {
+      // 기본: 횟수 기반
+      buffer.write('$reps ${exercise.name}');
     }
-
-    buffer.write(exercise.name);
 
     if (weight != null && weight! > 0) {
       buffer.write(' (${weight!.toInt()}lbs)');

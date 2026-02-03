@@ -171,15 +171,16 @@ class WodGenerator {
 
     // 카테고리 다양성 확보
     final selected = <Exercise>[];
-    final categories = <ExerciseCategory>{};
+    final categoryCounts = <ExerciseCategory, int>{};
 
     for (final exercise in shuffled) {
       if (selected.length >= count) break;
 
-      // 같은 카테고리가 너무 많지 않도록
-      if (categories.where((c) => c == exercise.category).length < 2) {
+      // 같은 카테고리가 2개 미만일 때만 추가
+      final currentCount = categoryCounts[exercise.category] ?? 0;
+      if (currentCount < 2) {
         selected.add(exercise);
-        categories.add(exercise.category);
+        categoryCounts[exercise.category] = currentCount + 1;
       }
     }
 
