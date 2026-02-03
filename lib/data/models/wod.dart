@@ -141,7 +141,7 @@ class Wod extends HiveObject {
         buffer.write(' (Time Cap: $duration분)');
         break;
       case WodType.tabata:
-        buffer.write('Tabata ($rounds라운드)');
+        buffer.write('Tabata (${rounds ?? 8}라운드)');
         break;
     }
 

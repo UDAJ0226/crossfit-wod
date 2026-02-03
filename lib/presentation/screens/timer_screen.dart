@@ -163,11 +163,14 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
                           // 현재 운동 표시 (EMOM/Tabata에서 휴식 중이 아닐 때)
                           if ((widget.wod.type == WodType.emom ||
                               widget.wod.type == WodType.tabata) &&
-                              !showRestOverlay)
+                              !showRestOverlay &&
+                              widget.wod.exercises.isNotEmpty)
                             _CurrentExercise(
                               wod: widget.wod,
-                              currentIndex: timerState.currentExerciseIndex %
-                                  widget.wod.exercises.length,
+                              currentIndex: widget.wod.exercises.isEmpty
+                                  ? 0
+                                  : timerState.currentExerciseIndex %
+                                      widget.wod.exercises.length,
                               typeColor: _typeColor,
                             ),
 
@@ -180,11 +183,14 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
                           const SizedBox(height: 24),
 
                           // 운동 목록
-                          _ExerciseList(
-                            wod: widget.wod,
-                            currentIndex: timerState.currentExerciseIndex %
-                                widget.wod.exercises.length,
-                          ),
+                          if (widget.wod.exercises.isNotEmpty)
+                            _ExerciseList(
+                              wod: widget.wod,
+                              currentIndex: widget.wod.exercises.isEmpty
+                                  ? 0
+                                  : timerState.currentExerciseIndex %
+                                      widget.wod.exercises.length,
+                            ),
                         ],
                       ),
                     ),

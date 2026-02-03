@@ -82,11 +82,12 @@ class WorkoutRepository {
   int getThisWeekWorkoutCount() {
     final now = DateTime.now();
     final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    // 주 시작일 00:00:00 이후 (포함)
     final startDate = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
 
     return _localStorage
         .getAllWorkoutRecords()
-        .where((r) => r.completedAt.isAfter(startDate))
+        .where((r) => !r.completedAt.isBefore(startDate))
         .length;
   }
 
