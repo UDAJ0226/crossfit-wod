@@ -3,9 +3,7 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 
-const RESOURCES = {"crossfit-wod.apk": "2234b1179911e3ebdd28ad9351ced614",
-"manifest.json": "452375f8f14f38fe16fd77aefbca7907",
-"exercises.csv": "7fe5a68f6047c2fdd9e6507229515379",
+const RESOURCES = {"manifest.json": "452375f8f14f38fe16fd77aefbca7907",
 "icons/Icon-maskable-192.png": "c457ef57daa1d16f64b27b786ec2ea3c",
 "icons/Icon-192.png": "ac9a721a12bbc803b44f645561ecb1e1",
 "icons/Icon-512.png": "96e752610906ba2a93c65f8abe1645f1",
@@ -33,11 +31,10 @@ const RESOURCES = {"crossfit-wod.apk": "2234b1179911e3ebdd28ad9351ced614",
 "canvaskit/chromium/canvaskit.js.symbols": "e2d09f0e434bc118bf67dae526737d07",
 "canvaskit/skwasm_heavy.js.symbols": "0755b4fb399918388d71b59ad390b055",
 "version.json": "25120078f0e68332682bce7dc543d74e",
-"crossfit_wod.apk": "f968e76d331da4943f0fe95709b5d82f",
 "index.html": "bb9c1f0cba2e802bc5ce0d2f12b14715",
 "/": "bb9c1f0cba2e802bc5ce0d2f12b14715",
-"flutter_bootstrap.js": "9619efd7c8a4bc8424fff26a7235d3aa",
-"main.dart.js": "aba3945eb75da24691417e92ddd9af65"};
+"flutter_bootstrap.js": "dd12fc5081fb64068c40a017b042fe6e",
+"main.dart.js": "1f1ac78fceda4689c4cbd2addabfe19b"};
 // The application shell files that are downloaded before a service worker can
 // start.
 const CORE = ["main.dart.js",
