@@ -42,6 +42,15 @@ def static_files(path):
         return send_from_directory(WEB_DIR, path)
     return send_from_directory(WEB_DIR, 'index.html')
 
+# 헬스체크 엔드포인트 (서버 슬립 방지용)
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        'status': 'ok',
+        'timestamp': datetime.now().isoformat(),
+        'service': 'crossfit-wod'
+    })
+
 # API 엔드포인트
 @app.route('/api/check', methods=['GET'])
 def check_nickname():

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
 import 'data/datasources/local_storage.dart';
 import 'data/repositories/exercise_repository.dart';
+import 'data/services/cloud_sync_service.dart';
 import 'core/constants/app_colors.dart';
 
 // 현재 데이터 버전 (운동 데이터 변경 시 증가)
@@ -48,6 +49,20 @@ Future<void> _initializeApp() async {
     LocalStorage.instance.init(),
   ]);
 
+  // 서버 헬스체크 (콜드 스타트 시 웜업)
+  final cloudSyncService = CloudSyncService();
+
+  // 서버가 슬립 상태일 수 있으므로 백그라운드에서 웜업 시도
+  cloudSyncService.healthCheck().then((healthy) {
+    if (healthy) {
+      debugPrint('✓ 서버 연결 성공');
+    } else {
+      debugPrint('✗ 서버 연결 실패 (오프라인 모드)');
+    }
+  }).catchError((e) {
+    debugPrint('서버 헬스체크 오류: $e');
+  });
+
   // 버전 확인 후 필요시에만 운동 데이터 갱신
   final exerciseRepository = ExerciseRepository(LocalStorage.instance);
   final storedVersion = LocalStorage.instance.dataVersion;
@@ -58,6 +73,9 @@ Future<void> _initializeApp() async {
   } else if (!exerciseRepository.hasExercises()) {
     await exerciseRepository.loadInitialExercises();
   }
+
+  // 최소 로딩 시간 보장
+  await Future.delayed(const Duration(milliseconds: 500));
 }
 
 /// 스플래시 화면 앱
@@ -116,6 +134,24 @@ class _SplashApp extends StatelessWidget {
                   valueColor: AlwaysStoppedAnimation<Color>(
                     AppColors.primary.withValues(alpha: 0.8),
                   ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // 로딩 메시지
+              Text(
+                '서버 연결 중...',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '첫 접속 시 30초 정도 소요될 수 있습니다',
+                style: TextStyle(
+                  color: AppColors.textSecondary.withValues(alpha: 0.6),
+                  fontSize: 12,
                 ),
               ),
             ],
