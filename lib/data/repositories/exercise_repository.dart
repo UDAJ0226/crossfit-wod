@@ -84,6 +84,8 @@ class ExerciseRepository {
     'hollow_hold',
     'tuck_jump',
     'wall_sit',
+    'leg_raise',
+    'hollow_rock',
   ];
 
   /// 홈트레이닝용 운동 가져오기 (장비 없는 모든 운동)
@@ -446,6 +448,22 @@ class ExerciseRepository {
         id: 'hollow_hold',
         name: 'Hollow Hold',
         description: '등을 바닥에 대고 팔과 다리를 살짝 들어 유지합니다.',
+        category: ExerciseCategory.gymnastics,
+        difficulty: Difficulty.intermediate,
+        equipment: [],
+      ),
+      Exercise(
+        id: 'leg_raise',
+        name: 'Leg Raise',
+        description: '누운 자세에서 다리를 곧게 펴고 천천히 들어올렸다 내립니다. 하복부 강화에 효과적입니다.',
+        category: ExerciseCategory.gymnastics,
+        difficulty: Difficulty.intermediate,
+        equipment: [],
+      ),
+      Exercise(
+        id: 'hollow_rock',
+        name: 'Hollow Rock',
+        description: '할로우 홀드 자세에서 몸을 앞뒤로 흔들어 코어 안정성을 강화합니다.',
         category: ExerciseCategory.gymnastics,
         difficulty: Difficulty.intermediate,
         equipment: [],

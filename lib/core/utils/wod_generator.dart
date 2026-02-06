@@ -18,6 +18,8 @@ class WodGenerator {
     'bicycle_crunch',
     'superman',
     'mountain_climber',
+    'leg_raise',
+    'hollow_rock',
   ];
 
   /// 랜덤 WOD 생성
@@ -152,7 +154,7 @@ class WodGenerator {
       throw Exception('사용 가능한 코어 운동이 없습니다.');
     }
 
-    final count = exerciseCount ?? (_random.nextInt(2) + 2); // 기본: 2-3개
+    final count = exerciseCount ?? 4; // 기본: 4개
     final selectedExercises = _selectRandomExercises(coreExercises, count);
 
     final wodExercises = selectedExercises.map((e) {
