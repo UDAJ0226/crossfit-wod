@@ -23,8 +23,8 @@ class CloudSyncService {
       // 웹에서는 현재 접속한 주소를 기반으로 API URL 생성
       return '${Uri.base.origin}/api';
     }
-    // 모바일 앱에서는 서버 주소 직접 지정 (필요시 수정)
-    return 'http://localhost:9000/api';
+    // 모바일 앱에서는 Render 서버 사용
+    return 'https://crossfit-wod.onrender.com/api';
   }
 
   /// 헬스체크 - 서버 상태 확인 및 웜업
@@ -32,7 +32,7 @@ class CloudSyncService {
     try {
       final healthUrl = kIsWeb
           ? '${Uri.base.origin}/health'
-          : 'http://localhost:9000/health';
+          : 'https://crossfit-wod.onrender.com/health';
 
       final response = await _client
           .get(Uri.parse(healthUrl))

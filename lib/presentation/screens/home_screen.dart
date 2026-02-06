@@ -144,43 +144,76 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-            // WOD 생성 버튼
+            // WOD 생성 버튼들
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: currentWodState.isLoading
-                        ? null
-                        : () => _generateWod(context, ref),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                    ),
-                    child: currentWodState.isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.shuffle, size: 24),
-                              SizedBox(width: 12),
-                              Text(
-                                AppStrings.generateWod,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                child: Row(
+                  children: [
+                    // WOD 생성 버튼
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: currentWodState.isLoading
+                            ? null
+                            : () => _generateWod(context, ref),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                        ),
+                        child: currentWodState.isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
                                 ),
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.shuffle, size: 24),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    AppStrings.generateWod,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                  ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // 코어 Tabata 버튼
+                    Expanded(
+                      flex: 1,
+                      child: ElevatedButton(
+                        onPressed: currentWodState.isLoading
+                            ? null
+                            : () => _generateCoreTabata(context, ref),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          backgroundColor: AppColors.tabata,
+                        ),
+                        child: const Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.fitness_center, size: 20),
+                            SizedBox(height: 4),
+                            Text(
+                              '코어',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -236,6 +269,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _generateWod(BuildContext context, WidgetRef ref) async {
     await ref.read(currentWodProvider.notifier).generateWod();
+  }
+
+  Future<void> _generateCoreTabata(BuildContext context, WidgetRef ref) async {
+    await ref.read(currentWodProvider.notifier).generateCoreTabata();
   }
 
   void _startWorkout(BuildContext context, Wod wod) {

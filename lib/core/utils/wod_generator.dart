@@ -8,6 +8,18 @@ class WodGenerator {
   final Random _random = Random();
   final Uuid _uuid = const Uuid();
 
+  /// 코어 운동 ID 목록
+  static const List<String> coreExerciseIds = [
+    'sit_up',
+    'plank_hold',
+    'v_up',
+    'hollow_hold',
+    'flutter_kicks',
+    'bicycle_crunch',
+    'superman',
+    'mountain_climber',
+  ];
+
   /// 랜덤 WOD 생성
   Wod generateWod({
     required List<Exercise> availableExercises,
@@ -119,6 +131,49 @@ class WodGenerator {
       difficulty: difficulty,
       exercises: wodExercises,
       duration: timeCap,
+      rounds: rounds,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  /// 코어 Tabata 생성
+  Wod generateCoreTabata({
+    required List<Exercise> availableExercises,
+    Difficulty difficulty = Difficulty.intermediate,
+    int? exerciseCount,
+  }) {
+    // 코어 운동만 필터링
+    final coreExercises = availableExercises
+        .where((e) => coreExerciseIds.contains(e.id))
+        .where((e) => e.difficulty.index <= difficulty.index)
+        .toList();
+
+    if (coreExercises.isEmpty) {
+      throw Exception('사용 가능한 코어 운동이 없습니다.');
+    }
+
+    final count = exerciseCount ?? (_random.nextInt(2) + 2); // 기본: 2-3개
+    final selectedExercises = _selectRandomExercises(coreExercises, count);
+
+    final wodExercises = selectedExercises.map((e) {
+      return WodExercise(
+        exercise: e,
+        reps: 0, // Tabata는 시간 기반
+        duration: 20, // 20초 운동
+      );
+    }).toList();
+
+    // Tabata: 각 운동당 8라운드, 20초 운동 + 10초 휴식
+    const rounds = 8;
+    const durationPerExercise = (20 + 10) * rounds ~/ 60; // 분
+    final totalDuration = durationPerExercise * selectedExercises.length;
+
+    return Wod(
+      id: _uuid.v4(),
+      type: WodType.tabata,
+      difficulty: difficulty,
+      exercises: wodExercises,
+      duration: totalDuration > 0 ? totalDuration : 4,
       rounds: rounds,
       createdAt: DateTime.now(),
     );

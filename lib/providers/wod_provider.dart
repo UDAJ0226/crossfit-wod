@@ -134,6 +134,49 @@ class CurrentWodNotifier extends StateNotifier<CurrentWodState> {
     }
   }
 
+  /// 코어 Tabata 생성
+  Future<void> generateCoreTabata() async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final difficulty = _ref.read(selectedDifficultyProvider);
+      final homeTrainingMode = _ref.read(homeTrainingModeProvider);
+      final generationMode = _ref.read(generationModeProvider);
+      final manualExerciseCount = _ref.read(manualExerciseCountProvider);
+      final exercises = _exerciseRepository.getAllExercises();
+
+      if (exercises.isEmpty) {
+        await _exerciseRepository.loadInitialExercises();
+      }
+
+      // 홈트레이닝 모드: 장비 없는 운동만 / 일반 모드: 홈트 전용 20개 제외
+      final availableExercises = homeTrainingMode
+          ? _exerciseRepository.getHomeTrainingExercises()
+          : _exerciseRepository.getNormalModeExercises();
+
+      // 자동: null (2-3개 랜덤), 수동: 선택한 갯수
+      final exerciseCount = generationMode == GenerationMode.auto
+          ? null
+          : manualExerciseCount;
+
+      final wod = _generator.generateCoreTabata(
+        availableExercises: availableExercises,
+        difficulty: difficulty,
+        exerciseCount: exerciseCount,
+      );
+
+      // 생성된 WOD 저장
+      await _workoutRepository.saveWod(wod);
+
+      state = CurrentWodState(wod: wod);
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: '코어 Tabata 생성 중 오류가 발생했습니다: $e',
+      );
+    }
+  }
+
   /// WOD 설정
   void setWod(Wod wod) {
     state = CurrentWodState(wod: wod);
