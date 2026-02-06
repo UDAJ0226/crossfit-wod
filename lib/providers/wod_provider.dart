@@ -140,29 +140,19 @@ class CurrentWodNotifier extends StateNotifier<CurrentWodState> {
 
     try {
       final difficulty = _ref.read(selectedDifficultyProvider);
-      final homeTrainingMode = _ref.read(homeTrainingModeProvider);
-      final generationMode = _ref.read(generationModeProvider);
-      final manualExerciseCount = _ref.read(manualExerciseCountProvider);
       final exercises = _exerciseRepository.getAllExercises();
 
       if (exercises.isEmpty) {
         await _exerciseRepository.loadInitialExercises();
       }
 
-      // 홈트레이닝 모드: 장비 없는 운동만 / 일반 모드: 홈트 전용 20개 제외
-      final availableExercises = homeTrainingMode
-          ? _exerciseRepository.getHomeTrainingExercises()
-          : _exerciseRepository.getNormalModeExercises();
-
-      // 자동: null (2-3개 랜덤), 수동: 선택한 갯수
-      final exerciseCount = generationMode == GenerationMode.auto
-          ? null
-          : manualExerciseCount;
+      // 코어 Tabata는 모든 운동에서 코어만 선택 (홈트 모드 무관)
+      final availableExercises = _exerciseRepository.getAllExercises();
 
       final wod = _generator.generateCoreTabata(
         availableExercises: availableExercises,
         difficulty: difficulty,
-        exerciseCount: exerciseCount,
+        exerciseCount: 4, // 항상 4개 고정
       );
 
       // 생성된 WOD 저장
