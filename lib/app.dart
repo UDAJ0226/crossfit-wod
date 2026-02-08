@@ -34,33 +34,9 @@ class _AppRoot extends ConsumerStatefulWidget {
 }
 
 class _AppRootState extends ConsumerState<_AppRoot> {
-  bool _isInitialized = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkNickname();
-  }
-
-  void _checkNickname() {
-    ref.read(userNotifierProvider);
-    setState(() {
-      _isInitialized = true;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final userState = ref.watch(userNotifierProvider);
-
-    if (!_isInitialized) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
-      );
-    }
 
     // 닉네임이 없으면 닉네임 화면 표시
     if (userState.value == null) {

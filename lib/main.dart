@@ -138,7 +138,7 @@ class _SplashApp extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               // 로딩 메시지
-              Text(
+              const Text(
                 '서버 연결 중...',
                 style: TextStyle(
                   color: AppColors.textSecondary,
