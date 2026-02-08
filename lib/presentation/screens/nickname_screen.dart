@@ -27,24 +27,7 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    final nickname = _controller.text.trim();
-
-    if (nickname.isEmpty) {
-      setState(() => _errorMessage = '닉네임을 입력해주세요');
-      return;
-    }
-
-    if (nickname.length < 2) {
-      setState(() => _errorMessage = '닉네임은 2자 이상이어야 합니다');
-      return;
-    }
-
-    if (nickname.length > 20) {
-      setState(() => _errorMessage = '닉네임은 20자 이하여야 합니다');
-      return;
-    }
-
+  Future<void> _loginWithNickname(String nickname) async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -65,8 +48,31 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
     }
   }
 
+  Future<void> _submit() async {
+    final nickname = _controller.text.trim();
+
+    if (nickname.isEmpty) {
+      setState(() => _errorMessage = '닉네임을 입력해주세요');
+      return;
+    }
+
+    if (nickname.length < 2) {
+      setState(() => _errorMessage = '닉네임은 2자 이상이어야 합니다');
+      return;
+    }
+
+    if (nickname.length > 20) {
+      setState(() => _errorMessage = '닉네임은 20자 이하여야 합니다');
+      return;
+    }
+
+    await _loginWithNickname(nickname);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final lastNickname = ref.watch(lastLoginNicknameProvider);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -196,6 +202,39 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
                         ),
                 ),
               ),
+
+              // 마지막 로그인 닉네임으로 빠른 로그인
+              if (lastNickname != null && lastNickname.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: _isLoading ? null : () => _loginWithNickname(lastNickname),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: AppColors.primary, width: 2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.person, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          '"$lastNickname" 으로 계속하기',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 24),
 

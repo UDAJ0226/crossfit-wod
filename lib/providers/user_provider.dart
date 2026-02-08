@@ -11,6 +11,12 @@ final currentNicknameProvider = StateProvider<String?>((ref) {
   return localStorage.getSetting<String>('nickname');
 });
 
+/// 마지막 로그인 닉네임 Provider (로그아웃해도 유지)
+final lastLoginNicknameProvider = Provider<String?>((ref) {
+  final localStorage = LocalStorage.instance;
+  return localStorage.getSetting<String>('lastLoginNickname');
+});
+
 /// 클라우드 동기화 서비스 Provider
 final cloudSyncServiceProvider = Provider<CloudSyncService>((ref) {
   return CloudSyncService();
@@ -43,6 +49,8 @@ class UserNotifier extends StateNotifier<AsyncValue<String?>> {
 
       // 로컬에 닉네임 저장
       await _localStorage.saveSetting('nickname', nickname);
+      // 마지막 로그인 닉네임 저장 (로그아웃해도 유지)
+      await _localStorage.saveSetting('lastLoginNickname', nickname);
 
       // 서버에서 데이터 가져오기
       await syncFromServer(nickname);
