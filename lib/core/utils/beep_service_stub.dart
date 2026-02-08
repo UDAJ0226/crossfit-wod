@@ -21,6 +21,11 @@ class BeepServiceStub implements BeepServiceInterface {
 
   @override
   void playFinish() {}
+
+  @override
+  void speak(String text) {
+    // 모바일에서는 TTS 미지원 (필요시 flutter_tts 패키지 추가)
+  }
 }
 
 BeepServiceInterface createBeepService() => BeepServiceStub();

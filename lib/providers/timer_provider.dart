@@ -23,11 +23,12 @@ class TimerState {
   final int totalSeconds; // 총 시간 (초)
   final int elapsedSeconds; // 경과 시간 (초)
   final int readyCountdown; // 준비 카운트다운 (초)
-  final int currentRound; // 현재 라운드
-  final int totalRounds; // 총 라운드
+  final int currentRound; // 현재 라운드 (세트)
+  final int totalRounds; // 총 라운드 (세트)
   final TimerPhase phase; // 현재 페이즈 (운동/휴식)
   final int phaseRemainingSeconds; // 현재 페이즈 남은 초
   final int currentExerciseIndex; // EMOM/Tabata: 현재 운동 인덱스
+  final int exerciseCount; // 총 운동 개수
   final WodType? wodType;
 
   const TimerState({
@@ -40,6 +41,7 @@ class TimerState {
     this.phase = TimerPhase.work,
     this.phaseRemainingSeconds = 0,
     this.currentExerciseIndex = 0,
+    this.exerciseCount = 1,
     this.wodType,
   });
 
@@ -106,6 +108,7 @@ class TimerState {
     TimerPhase? phase,
     int? phaseRemainingSeconds,
     int? currentExerciseIndex,
+    int? exerciseCount,
     WodType? wodType,
   }) {
     return TimerState(
@@ -118,6 +121,7 @@ class TimerState {
       phase: phase ?? this.phase,
       phaseRemainingSeconds: phaseRemainingSeconds ?? this.phaseRemainingSeconds,
       currentExerciseIndex: currentExerciseIndex ?? this.currentExerciseIndex,
+      exerciseCount: exerciseCount ?? this.exerciseCount,
       wodType: wodType ?? this.wodType,
     );
   }
@@ -125,6 +129,9 @@ class TimerState {
 
 /// 타이머 콜백 타입
 typedef TimerCallback = void Function(TimerState state);
+
+/// 운동 안내 콜백 타입 (운동 인덱스 전달)
+typedef ExerciseAnnounceCallback = void Function(int exerciseIndex);
 
 /// 타이머 Notifier
 class TimerNotifier extends StateNotifier<TimerState> {
@@ -135,6 +142,8 @@ class TimerNotifier extends StateNotifier<TimerState> {
   TimerCallback? _onFinish;
   TimerCallback? _onWarning; // 5, 4, 3, 2, 1초 카운트다운
   TimerCallback? _onReadyBeep; // 준비 카운트다운 비프
+  ExerciseAnnounceCallback? _onExerciseAnnounce; // 운동 종목 안내
+  bool _hasAnnouncedFirstExercise = false; // 첫 운동 안내 여부
 
   TimerNotifier() : super(const TimerState());
 
@@ -146,6 +155,7 @@ class TimerNotifier extends StateNotifier<TimerState> {
     TimerCallback? onFinish,
     TimerCallback? onWarning,
     TimerCallback? onReadyBeep,
+    ExerciseAnnounceCallback? onExerciseAnnounce,
   }) {
     _onRoundChange = onRoundChange;
     _onPhaseChange = onPhaseChange;
@@ -153,13 +163,16 @@ class TimerNotifier extends StateNotifier<TimerState> {
     _onFinish = onFinish;
     _onWarning = onWarning;
     _onReadyBeep = onReadyBeep;
+    _onExerciseAnnounce = onExerciseAnnounce;
   }
 
   /// WOD에 맞는 타이머 초기화
   void initializeForWod(Wod wod) {
     _timer?.cancel();
+    _hasAnnouncedFirstExercise = false;
 
     final totalSeconds = wod.duration * 60;
+    final exerciseCount = wod.exercises.length > 0 ? wod.exercises.length : 1;
     int totalRounds = 1;
 
     switch (wod.type) {
@@ -167,13 +180,15 @@ class TimerNotifier extends StateNotifier<TimerState> {
         totalRounds = 1;
         break;
       case WodType.emom:
-        totalRounds = wod.duration;
+        // 총 세트 수 = 총 분 / 운동 개수
+        totalRounds = (wod.duration / exerciseCount).ceil();
         break;
       case WodType.forTime:
         totalRounds = wod.rounds ?? 1;
         break;
       case WodType.tabata:
-        totalRounds = wod.exercises.length * 8;
+        // 총 세트 수 = 8 (운동을 순서대로 8번 반복)
+        totalRounds = 8;
         break;
     }
 
@@ -187,6 +202,7 @@ class TimerNotifier extends StateNotifier<TimerState> {
       phase: TimerPhase.work,
       phaseRemainingSeconds: 0,
       currentExerciseIndex: 0,
+      exerciseCount: exerciseCount,
       wodType: wod.type,
     );
   }
@@ -216,6 +232,14 @@ class TimerNotifier extends StateNotifier<TimerState> {
   /// 준비 카운트다운 처리
   void _handleReadyCountdown() {
     final newCountdown = state.readyCountdown - 1;
+
+    // EMOM/Tabata: 시작 10초 전에 첫 운동 종목 안내
+    if (newCountdown == 9 && !_hasAnnouncedFirstExercise) {
+      if (state.wodType == WodType.emom || state.wodType == WodType.tabata) {
+        _onExerciseAnnounce?.call(0); // 첫 번째 운동
+        _hasAnnouncedFirstExercise = true;
+      }
+    }
 
     // 5초 이하일 때 비프음
     if (newCountdown <= 5 && newCountdown > 0) {
@@ -312,9 +336,22 @@ class TimerNotifier extends StateNotifier<TimerState> {
       _onWarning?.call(state.copyWith(elapsedSeconds: newElapsed));
     }
 
+    // 운동을 순서대로 진행: 운동1→운동2→운동3 = 1세트, 다시 운동1→운동2→운동3 = 2세트...
+    final exerciseCount = state.exerciseCount > 0 ? state.exerciseCount : 1;
+    final exerciseIndex = currentMinute % exerciseCount;
+    final roundNumber = currentMinute ~/ exerciseCount + 1;
+
+    // 종료 5초 전에 다음 운동 안내 (마지막 분이 아닐 때)
+    final totalMinutes = state.totalSeconds ~/ 60;
+    if (secondsRemaining == 5 && currentMinute < totalMinutes - 1) {
+      final nextExerciseIndex = (currentMinute + 1) % exerciseCount;
+      _onExerciseAnnounce?.call(nextExerciseIndex);
+    }
+
     state = state.copyWith(
       elapsedSeconds: newElapsed,
-      currentRound: currentMinute + 1,
+      currentRound: roundNumber,
+      currentExerciseIndex: exerciseIndex,
       phaseRemainingSeconds: secondsRemaining,
     );
 
@@ -361,6 +398,16 @@ class TimerNotifier extends StateNotifier<TimerState> {
         phaseRemainingSeconds: phaseRemaining,
       );
       _onPhaseChange?.call(state);
+
+      // 휴식 시작 시 다음 운동 안내 (마지막 사이클이 아닐 때)
+      if (newPhase == TimerPhase.rest) {
+        final exerciseCount = state.exerciseCount > 0 ? state.exerciseCount : 1;
+        final totalCycles = exerciseCount * 8; // Tabata는 8세트
+        if (currentCycle < totalCycles - 1) {
+          final nextExerciseIndex = (currentCycle + 1) % exerciseCount;
+          _onExerciseAnnounce?.call(nextExerciseIndex);
+        }
+      }
     } else {
       state = state.copyWith(
         elapsedSeconds: newElapsed,
@@ -369,12 +416,16 @@ class TimerNotifier extends StateNotifier<TimerState> {
     }
 
     // 새 사이클 시작 (라운드 변경)
+    // 운동을 순서대로 진행: 운동1→운동2→운동3 = 1세트, 다시 운동1→운동2→운동3 = 2세트...
     if (currentCycle > previousCycle) {
-      const roundsPerExercise = 8;
-      final exerciseIndex = currentCycle ~/ roundsPerExercise;
+      final exerciseCount = state.exerciseCount > 0 ? state.exerciseCount : 1;
+      // 현재 운동 인덱스 = 사이클을 운동 개수로 나눈 나머지
+      final exerciseIndex = currentCycle % exerciseCount;
+      // 현재 세트(라운드) = 사이클을 운동 개수로 나눈 몫 + 1
+      final roundNumber = currentCycle ~/ exerciseCount + 1;
 
       state = state.copyWith(
-        currentRound: currentCycle + 1,
+        currentRound: roundNumber,
         currentExerciseIndex: exerciseIndex,
       );
       _onRoundChange?.call(state);

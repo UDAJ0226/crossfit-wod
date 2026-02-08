@@ -45,4 +45,9 @@ class BeepService {
     HapticFeedback.heavyImpact();
     _impl.playFinish();
   }
+
+  /// 운동 종목 음성 안내
+  void speak(String text) {
+    _impl.speak(text);
+  }
 }

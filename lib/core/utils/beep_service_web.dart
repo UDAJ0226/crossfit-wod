@@ -84,6 +84,25 @@ class BeepServiceWeb implements BeepServiceInterface {
       } catch (_) {}
     }
   }
+
+  @override
+  void speak(String text) {
+    try {
+      final synthesis = window.speechSynthesis;
+      // 이전 음성 취소
+      synthesis.cancel();
+
+      final utterance = SpeechSynthesisUtterance(text);
+      utterance.lang = 'ko-KR';
+      utterance.rate = 1.2;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      synthesis.speak(utterance);
+    } catch (e) {
+      debugPrint('TTS error: $e');
+    }
+  }
 }
 
 BeepServiceInterface createBeepService() => BeepServiceWeb();

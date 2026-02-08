@@ -6,4 +6,5 @@ abstract class BeepServiceInterface {
   void playHighBeep();
   void playLowBeep();
   void playFinish();
+  void speak(String text);
 }

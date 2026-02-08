@@ -54,8 +54,18 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
         onWarning: (_) => _playTick(),
         onFinish: (_) => _playFinish(),
         onReadyBeep: (_) => _playTick(),
+        onExerciseAnnounce: (exerciseIndex) => _announceExercise(exerciseIndex),
       );
     });
+  }
+
+  /// 운동 종목 음성 안내
+  void _announceExercise(int exerciseIndex) {
+    if (widget.wod.exercises.isEmpty) return;
+    if (exerciseIndex < 0 || exerciseIndex >= widget.wod.exercises.length) return;
+
+    final exercise = widget.wod.exercises[exerciseIndex].exercise;
+    _beepService.speak(exercise.name);
   }
 
   @override
