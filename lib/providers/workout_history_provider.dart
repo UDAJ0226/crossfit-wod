@@ -23,21 +23,34 @@ final selectedDateProvider = StateProvider<DateTime>((ref) {
   return DateTime(now.year, now.month, now.day);
 });
 
-// 선택된 날짜의 운동 기록 Provider
+// 선택된 날짜의 운동 기록 Provider (최적화: workoutHistoryProvider 재활용)
 final selectedDateWorkoutsProvider = Provider<List<WorkoutRecord>>((ref) {
-  final repository = ref.watch(workoutRepositoryProvider);
+  final records = ref.watch(workoutHistoryProvider);
   final selectedDate = ref.watch(selectedDateProvider);
-  return repository.getWorkoutRecordsByDate(selectedDate);
+
+  return records
+      .where((r) =>
+          r.completedAt.year == selectedDate.year &&
+          r.completedAt.month == selectedDate.month &&
+          r.completedAt.day == selectedDate.day)
+      .toList();
 });
 
-// 현재 월의 운동 날짜 Provider
+// 현재 월의 운동 날짜 Provider (최적화: workoutHistoryProvider 재활용)
 final currentMonthWorkoutDatesProvider = Provider<Set<DateTime>>((ref) {
-  final repository = ref.watch(workoutRepositoryProvider);
+  final records = ref.watch(workoutHistoryProvider);
   final selectedDate = ref.watch(selectedDateProvider);
-  return repository.getWorkoutDates(
-    year: selectedDate.year,
-    month: selectedDate.month,
-  );
+
+  return records
+      .where((r) =>
+          r.completedAt.year == selectedDate.year &&
+          r.completedAt.month == selectedDate.month)
+      .map((r) => DateTime(
+            r.completedAt.year,
+            r.completedAt.month,
+            r.completedAt.day,
+          ))
+      .toSet();
 });
 
 // 운동 통계 클래스
@@ -55,14 +68,75 @@ class WorkoutStats {
   });
 }
 
-// 운동 통계 Provider
+// 운동 통계 Provider (최적화: 한 번만 데이터 로드)
 final workoutStatsProvider = Provider<WorkoutStats>((ref) {
-  final repository = ref.watch(workoutRepositoryProvider);
+  final records = ref.watch(workoutHistoryProvider);
+
+  if (records.isEmpty) {
+    return const WorkoutStats(
+      totalWorkouts: 0,
+      thisWeekWorkouts: 0,
+      thisMonthWorkouts: 0,
+      currentStreak: 0,
+    );
+  }
+
+  final now = DateTime.now();
+  final todayDate = DateTime(now.year, now.month, now.day);
+
+  // 이번 주 시작일
+  final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+  final weekStartDate = DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day);
+
+  // 한 번의 순회로 모든 통계 계산
+  int thisWeekCount = 0;
+  int thisMonthCount = 0;
+  final workoutDays = <DateTime>{};
+
+  for (final record in records) {
+    final recordDate = DateTime(
+      record.completedAt.year,
+      record.completedAt.month,
+      record.completedAt.day,
+    );
+
+    workoutDays.add(recordDate);
+
+    if (!record.completedAt.isBefore(weekStartDate)) {
+      thisWeekCount++;
+    }
+
+    if (record.completedAt.year == now.year && record.completedAt.month == now.month) {
+      thisMonthCount++;
+    }
+  }
+
+  // 연속 일수 계산
+  int streak = 0;
+  DateTime checkDate = todayDate;
+
+  if (!workoutDays.contains(todayDate)) {
+    checkDate = todayDate.subtract(const Duration(days: 1));
+    if (!workoutDays.contains(checkDate)) {
+      streak = 0;
+    } else {
+      while (workoutDays.contains(checkDate)) {
+        streak++;
+        checkDate = checkDate.subtract(const Duration(days: 1));
+      }
+    }
+  } else {
+    while (workoutDays.contains(checkDate)) {
+      streak++;
+      checkDate = checkDate.subtract(const Duration(days: 1));
+    }
+  }
+
   return WorkoutStats(
-    totalWorkouts: repository.getTotalWorkoutCount(),
-    thisWeekWorkouts: repository.getThisWeekWorkoutCount(),
-    thisMonthWorkouts: repository.getThisMonthWorkoutCount(),
-    currentStreak: repository.getWorkoutStreak(),
+    totalWorkouts: records.length,
+    thisWeekWorkouts: thisWeekCount,
+    thisMonthWorkouts: thisMonthCount,
+    currentStreak: streak,
   );
 });
 
