@@ -93,12 +93,13 @@ class BeepServiceWeb implements BeepServiceInterface {
       synthesis.cancel();
 
       final utterance = SpeechSynthesisUtterance(text);
+      // web 패키지에서는 setter 사용
       utterance.lang = 'ko-KR';
-      utterance.rate = 1.2;
-      utterance.pitch = 1.0;
+      utterance.rate = 1.0;
       utterance.volume = 1.0;
 
       synthesis.speak(utterance);
+      debugPrint('TTS speaking: $text');
     } catch (e) {
       debugPrint('TTS error: $e');
     }

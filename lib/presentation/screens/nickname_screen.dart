@@ -20,6 +20,19 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
   final _controller = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+  String? _lastNickname;
+
+  @override
+  void initState() {
+    super.initState();
+    // 마지막 로그인 닉네임 로드
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final nickname = ref.read(lastLoginNicknameProvider);
+      if (nickname != null && nickname.isNotEmpty) {
+        setState(() => _lastNickname = nickname);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -71,8 +84,6 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final lastNickname = ref.watch(lastLoginNicknameProvider);
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -204,12 +215,12 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
               ),
 
               // 마지막 로그인 닉네임으로 빠른 로그인
-              if (lastNickname != null && lastNickname.isNotEmpty) ...[
+              if (_lastNickname != null && _lastNickname!.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: _isLoading ? null : () => _loginWithNickname(lastNickname),
+                    onPressed: _isLoading ? null : () => _loginWithNickname(_lastNickname!),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: const BorderSide(color: AppColors.primary, width: 2),
@@ -223,7 +234,7 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
                         const Icon(Icons.person, color: AppColors.primary),
                         const SizedBox(width: 8),
                         Text(
-                          '"$lastNickname" 으로 계속하기',
+                          '"$_lastNickname" 으로 계속하기',
                           style: const TextStyle(
                             color: AppColors.primary,
                             fontSize: 16,
