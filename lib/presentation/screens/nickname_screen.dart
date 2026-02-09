@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_colors.dart';
+import '../../data/datasources/local_storage.dart';
 import '../../providers/user_provider.dart';
 
 /// 닉네임 입력/선택 화면
@@ -25,9 +26,9 @@ class _NicknameScreenState extends ConsumerState<NicknameScreen> {
   @override
   void initState() {
     super.initState();
-    // 마지막 로그인 닉네임 로드
+    // 마지막 로그인 닉네임 로드 (LocalStorage에서 직접 읽기)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final nickname = ref.read(lastLoginNicknameProvider);
+      final nickname = LocalStorage.instance.getSetting<String>('lastLoginNickname');
       if (nickname != null && nickname.isNotEmpty) {
         setState(() => _lastNickname = nickname);
       }

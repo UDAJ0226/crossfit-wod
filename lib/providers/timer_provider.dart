@@ -341,9 +341,9 @@ class TimerNotifier extends StateNotifier<TimerState> {
     final exerciseIndex = currentMinute % exerciseCount;
     final roundNumber = currentMinute ~/ exerciseCount + 1;
 
-    // 종료 5초 전에 다음 운동 안내 (마지막 분이 아닐 때)
+    // 종료 10초 전에 다음 운동 안내 (마지막 분이 아닐 때)
     final totalMinutes = state.totalSeconds ~/ 60;
-    if (secondsRemaining == 5 && currentMinute < totalMinutes - 1) {
+    if (secondsRemaining == 10 && currentMinute < totalMinutes - 1) {
       final nextExerciseIndex = (currentMinute + 1) % exerciseCount;
       _onExerciseAnnounce?.call(nextExerciseIndex);
     }
