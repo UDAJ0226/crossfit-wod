@@ -402,7 +402,7 @@ class TimerNotifier extends StateNotifier<TimerState> {
       // 휴식 시작 시 다음 운동 안내 (마지막 사이클이 아닐 때)
       if (newPhase == TimerPhase.rest) {
         final exerciseCount = state.exerciseCount > 0 ? state.exerciseCount : 1;
-        final totalCycles = exerciseCount * 8; // Tabata는 8세트
+        final totalCycles = state.totalSeconds ~/ cycleDuration;
         if (currentCycle < totalCycles - 1) {
           final nextExerciseIndex = (currentCycle + 1) % exerciseCount;
           _onExerciseAnnounce?.call(nextExerciseIndex);
