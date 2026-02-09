@@ -17,15 +17,27 @@ class BeepServiceWeb implements BeepServiceInterface {
 
   @override
   Future<void> resumeAudioContext() async {
-    // AudioContext resume
-    if (_audioContext != null) {
-      try {
-        if (_audioContext!.state == 'suspended') {
-          _audioContext!.resume();
-        }
-      } catch (e) {
-        debugPrint('AudioContext resume error: $e');
+    // iOS Safari: 사용자 상호작용 시 AudioContext 생성/활성화
+    try {
+      _audioContext ??= AudioContext();
+
+      if (_audioContext!.state == 'suspended') {
+        _audioContext!.resume();
       }
+
+      // iOS Safari: 무음 비프로 오디오 컨텍스트 활성화
+      final ctx = _audioContext!;
+      final oscillator = ctx.createOscillator();
+      final gainNode = ctx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      gainNode.gain.value = 0; // 무음
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.001);
+
+      debugPrint('AudioContext activated: ${ctx.state}');
+    } catch (e) {
+      debugPrint('AudioContext resume error: $e');
     }
 
     // iOS Safari TTS 워밍업 (사용자 상호작용 시 빈 utterance로 활성화)
