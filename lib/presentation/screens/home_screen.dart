@@ -192,7 +192,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       child: ElevatedButton(
                         onPressed: currentWodState.isLoading
                             ? null
-                            : () => _generateCoreTabata(context, ref),
+                            : () => _generateCoreWorkout(context, ref),
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 20),
                           backgroundColor: AppColors.tabata,
@@ -271,8 +271,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     await ref.read(currentWodProvider.notifier).generateWod();
   }
 
-  Future<void> _generateCoreTabata(BuildContext context, WidgetRef ref) async {
-    await ref.read(currentWodProvider.notifier).generateCoreTabata();
+  Future<void> _generateCoreWorkout(BuildContext context, WidgetRef ref) async {
+    await ref.read(currentWodProvider.notifier).generateCoreWorkout();
   }
 
   void _startWorkout(BuildContext context, Wod wod) {

@@ -181,6 +181,81 @@ class WodGenerator {
     );
   }
 
+  /// 코어 EMOM 생성
+  Wod generateCoreEmom({
+    required List<Exercise> availableExercises,
+    Difficulty difficulty = Difficulty.intermediate,
+    int? exerciseCount,
+  }) {
+    // 코어 운동만 필터링
+    final coreExercises = availableExercises
+        .where((e) => coreExerciseIds.contains(e.id))
+        .where((e) => e.difficulty.index <= difficulty.index)
+        .toList();
+
+    if (coreExercises.isEmpty) {
+      throw Exception('사용 가능한 코어 운동이 없습니다.');
+    }
+
+    final count = exerciseCount ?? 3; // 기본: 3개
+    final selectedExercises = _selectRandomExercises(coreExercises, count);
+
+    final wodExercises = selectedExercises.map((e) {
+      return WodExercise(
+        exercise: e,
+        reps: _getCoreEmomReps(e, difficulty),
+      );
+    }).toList();
+
+    // EMOM: 운동 개수에 맞춰 총 시간 설정 (3개 운동 x 4세트 = 12분)
+    final duration = count * 4; // 4세트 기준
+
+    return Wod(
+      id: _uuid.v4(),
+      type: WodType.emom,
+      difficulty: difficulty,
+      exercises: wodExercises,
+      duration: duration,
+      rounds: duration,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  /// 코어 EMOM용 반복 횟수
+  int _getCoreEmomReps(Exercise exercise, Difficulty difficulty) {
+    switch (difficulty) {
+      case Difficulty.beginner:
+        return [10, 12, 15][_random.nextInt(3)];
+      case Difficulty.intermediate:
+        return [15, 18, 20][_random.nextInt(3)];
+      case Difficulty.advanced:
+        return [20, 25, 30][_random.nextInt(3)];
+    }
+  }
+
+  /// 코어 운동 랜덤 생성 (Tabata 또는 EMOM)
+  Wod generateCoreRandom({
+    required List<Exercise> availableExercises,
+    Difficulty difficulty = Difficulty.intermediate,
+  }) {
+    // 랜덤으로 Tabata 또는 EMOM 선택
+    final isTabata = _random.nextBool();
+
+    if (isTabata) {
+      return generateCoreTabata(
+        availableExercises: availableExercises,
+        difficulty: difficulty,
+        exerciseCount: 4, // Tabata: 4개
+      );
+    } else {
+      return generateCoreEmom(
+        availableExercises: availableExercises,
+        difficulty: difficulty,
+        exerciseCount: 3, // EMOM: 3개
+      );
+    }
+  }
+
   /// Tabata 생성
   Wod _generateTabata(List<Exercise> exercises, Difficulty difficulty, int? customExerciseCount) {
     // Tabata에 적합한 운동만 필터 (체조, 유산소)

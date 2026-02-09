@@ -134,8 +134,8 @@ class CurrentWodNotifier extends StateNotifier<CurrentWodState> {
     }
   }
 
-  /// 코어 Tabata 생성
-  Future<void> generateCoreTabata() async {
+  /// 코어 운동 생성 (Tabata 4개 또는 EMOM 3개 랜덤)
+  Future<void> generateCoreWorkout() async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -146,13 +146,12 @@ class CurrentWodNotifier extends StateNotifier<CurrentWodState> {
         await _exerciseRepository.loadInitialExercises();
       }
 
-      // 코어 Tabata는 모든 운동에서 코어만 선택 (홈트 모드 무관)
+      // 코어 운동은 모든 운동에서 코어만 선택 (홈트 모드 무관)
       final availableExercises = _exerciseRepository.getAllExercises();
 
-      final wod = _generator.generateCoreTabata(
+      final wod = _generator.generateCoreRandom(
         availableExercises: availableExercises,
         difficulty: difficulty,
-        exerciseCount: 4, // 항상 4개 고정
       );
 
       // 생성된 WOD 저장
@@ -162,7 +161,7 @@ class CurrentWodNotifier extends StateNotifier<CurrentWodState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: '코어 Tabata 생성 중 오류가 발생했습니다: $e',
+        error: '코어 운동 생성 중 오류가 발생했습니다: $e',
       );
     }
   }
