@@ -233,7 +233,7 @@ extension DifficultyColor on Difficulty {
       case Difficulty.intermediate:
         return '중급';
       case Difficulty.advanced:
-        return '고급';
+        return '상급';
     }
   }
 }

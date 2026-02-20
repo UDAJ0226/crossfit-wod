@@ -23,7 +23,7 @@ enum Difficulty {
   @HiveField(1)
   intermediate, // 중급
   @HiveField(2)
-  advanced, // 고급
+  advanced, // 상급
 }
 
 /// 운동 모델
@@ -183,7 +183,12 @@ class WodExercise extends HiveObject {
     }
 
     if (weight != null && weight! > 0) {
-      buffer.write(' (${weight!.toInt()}lbs)');
+      // 케틀벨 운동은 kg, 나머지는 lbs
+      final isKettlebell = exercise.equipment.contains('Kettlebell') &&
+          !exercise.equipment.contains('Barbell') &&
+          !exercise.equipment.contains('Dumbbell');
+      final unit = isKettlebell ? 'kg' : 'lbs';
+      buffer.write(' (${weight!.toInt()}$unit)');
     }
 
     return buffer.toString();

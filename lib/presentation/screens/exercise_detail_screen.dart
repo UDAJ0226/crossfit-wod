@@ -57,7 +57,7 @@ class ExerciseDetailScreen extends StatelessWidget {
       case Difficulty.intermediate:
         return '중급';
       case Difficulty.advanced:
-        return '고급';
+        return '상급';
     }
   }
 
@@ -333,7 +333,7 @@ class ExerciseDetailScreen extends StatelessWidget {
         return AppColors.beginner;
       case '중급':
         return AppColors.intermediate;
-      case '고급':
+      case '상급':
         return AppColors.advanced;
       default:
         return AppColors.textSecondary;
@@ -346,37 +346,37 @@ class ExerciseDetailScreen extends StatelessWidget {
         return {
           '초급': '밴드 풀업 또는 링 로우',
           '중급': '키핑 풀업',
-          '고급': '스트릭트 풀업 또는 웨이티드 풀업',
+          '상급': '스트릭트 풀업 또는 웨이티드 풀업',
         };
       case 'muscle_up':
         return {
           '초급': '풀업 + 딥 따로 수행',
           '중급': '바 머슬업 또는 밴드 보조',
-          '고급': '스트릭트 머슬업',
+          '상급': '스트릭트 머슬업',
         };
       case 'handstand_push_up':
         return {
           '초급': '파이크 푸시업',
           '중급': '박스 핸드스탠드 푸시업',
-          '고급': '스트릭트 또는 키핑 HSPU',
+          '상급': '스트릭트 또는 키핑 HSPU',
         };
       case 'double_under':
         return {
           '초급': '싱글언더 3배',
           '중급': '더블언더 연습 (실패해도 OK)',
-          '고급': '트리플 언더',
+          '상급': '트리플 언더',
         };
       case 'snatch':
         return {
           '초급': '덤벨 스내치 또는 파워 스내치',
           '중급': '풀 스내치 (가벼운 무게)',
-          '고급': '풀 스쿼트 스내치',
+          '상급': '풀 스쿼트 스내치',
         };
       default:
         return {
           '초급': '횟수 줄이기 또는 변형 동작',
           '중급': '처방된 대로 수행',
-          '고급': '횟수 늘리기 또는 무게 추가',
+          '상급': '횟수 늘리기 또는 무게 추가',
         };
     }
   }

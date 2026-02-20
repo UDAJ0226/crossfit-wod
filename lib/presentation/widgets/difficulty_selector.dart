@@ -66,7 +66,7 @@ class _DifficultyChip extends StatelessWidget {
       case Difficulty.intermediate:
         return '중급';
       case Difficulty.advanced:
-        return '고급';
+        return '상급';
     }
   }
 
@@ -182,7 +182,7 @@ class _DifficultyTile extends StatelessWidget {
       case Difficulty.intermediate:
         return '중급';
       case Difficulty.advanced:
-        return '고급';
+        return '상급';
     }
   }
 
@@ -193,7 +193,7 @@ class _DifficultyTile extends StatelessWidget {
       case Difficulty.intermediate:
         return '복합 동작 포함, 중간 강도';
       case Difficulty.advanced:
-        return '고급 동작, 높은 강도';
+        return '상급 동작, 높은 강도';
     }
   }
 

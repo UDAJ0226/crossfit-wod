@@ -115,10 +115,10 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
   Widget build(BuildContext context) {
     final timerState = ref.watch(timerProvider);
     final isReady = timerState.status == TimerStatus.ready;
-    final showRestOverlay = (widget.wod.type == WodType.emom ||
-                             widget.wod.type == WodType.tabata) &&
-                            timerState.status == TimerStatus.running &&
-                            timerState.isResting;
+    final isEmomOrTabataRunning = (widget.wod.type == WodType.emom ||
+                                    widget.wod.type == WodType.tabata) &&
+                                   timerState.status == TimerStatus.running;
+    final showRestOverlay = isEmomOrTabataRunning && timerState.isResting;
 
     return PopScope(
       canPop: true,  // 항상 뒤로가기 허용
@@ -221,6 +221,14 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
               ),
             ),
 
+            // EMOM/Tabata 전체화면 오버레이 (운동 중)
+            if (isEmomOrTabataRunning && widget.wod.exercises.isNotEmpty)
+              _EmomTabataFullscreenOverlay(
+                wod: widget.wod,
+                timerState: timerState,
+                typeColor: _typeColor,
+              ),
+
             // Ready 카운트다운 오버레이
             if (isReady)
               _ReadyCountdownOverlay(
@@ -311,6 +319,227 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
         }
       }
     }
+  }
+}
+
+/// EMOM/Tabata 전체화면 오버레이
+class _EmomTabataFullscreenOverlay extends StatelessWidget {
+  final Wod wod;
+  final TimerState timerState;
+  final Color typeColor;
+
+  const _EmomTabataFullscreenOverlay({
+    required this.wod,
+    required this.timerState,
+    required this.typeColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isResting = timerState.isResting;
+    final exerciseIndex = wod.exercises.isEmpty
+        ? 0
+        : timerState.currentExerciseIndex % wod.exercises.length;
+    final currentExercise = wod.exercises[exerciseIndex];
+
+    // 페이즈 남은 시간
+    final int phaseSeconds;
+    if (wod.type == WodType.tabata) {
+      phaseSeconds = timerState.tabataPhaseRemainingSeconds;
+    } else {
+      // EMOM: 현재 분 내 남은 초
+      phaseSeconds = timerState.currentMinuteRemainingSeconds;
+    }
+
+    // 전체 남은 시간
+    final remainingDisplay = timerState.remainingTimeDisplay;
+
+    // 라운드 정보
+    final isEmom = wod.type == WodType.emom;
+    final roundInfo = isEmom
+        ? '분 ${(timerState.elapsedSeconds ~/ 60) + 1} / ${timerState.totalSeconds ~/ 60}'
+        : '라운드 ${timerState.currentRound} / ${timerState.totalRounds}';
+
+    final bgColor = isResting
+        ? Colors.black.withValues(alpha: 0.9)
+        : Colors.black.withValues(alpha: 0.85);
+
+    // EMOM은 항상 WORK 상태 (휴식 페이즈가 없음)
+    final phaseColor = isResting ? AppColors.error : AppColors.success;
+    final phaseText = isEmom ? 'GO!' : (isResting ? 'REST' : 'WORK');
+
+    final isWarning = phaseSeconds <= 5 && phaseSeconds > 0;
+
+    return Container(
+      color: bgColor,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // 상단: WOD 타입 + 전체 남은 시간
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: typeColor.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      wod.type.displayName,
+                      style: TextStyle(
+                        color: typeColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    remainingDisplay,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 중앙 메인 영역
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // 페이즈 표시 (WORK / REST)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: phaseColor.withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: phaseColor,
+                          width: 3,
+                        ),
+                      ),
+                      child: Text(
+                        phaseText,
+                        style: TextStyle(
+                          color: phaseColor,
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 8,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // 운동 종목명 (큰 글씨)
+                    if (!isResting)
+                      Text(
+                        currentExercise.exercise.name,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: typeColor,
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                    // 휴식 중에는 다음 운동 미리보기
+                    if (isResting) ...[
+                      const Text(
+                        '휴식 중',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 20,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '다음: ${_getNextExerciseName()}',
+                        style: TextStyle(
+                          color: typeColor.withValues(alpha: 0.8),
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 32),
+
+                    // 페이즈 카운트다운 (매우 큰 글씨)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isWarning
+                            ? AppColors.warning.withValues(alpha: 0.2)
+                            : phaseColor.withValues(alpha: 0.15),
+                        border: Border.all(
+                          color: isWarning ? AppColors.warning : phaseColor,
+                          width: 4,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$phaseSeconds',
+                          style: TextStyle(
+                            color: isWarning
+                                ? AppColors.warning
+                                : AppColors.textPrimary,
+                            fontSize: 100,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // 라운드 정보
+                    Text(
+                      roundInfo,
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 18,
+                      ),
+                    ),
+
+                    // 운동 상세 (reps/weight) - 운동 중에만
+                    if (!isResting && currentExercise.reps > 0) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        currentExercise.displayText,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getNextExerciseName() {
+    if (wod.exercises.isEmpty) return '';
+    final nextIndex = (timerState.currentExerciseIndex + 1) % wod.exercises.length;
+    return wod.exercises[nextIndex].exercise.name;
   }
 }
 

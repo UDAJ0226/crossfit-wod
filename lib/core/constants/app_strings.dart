@@ -28,7 +28,7 @@ class AppStrings {
   static const String difficulty = '난이도';
   static const String beginner = '초급';
   static const String intermediate = '중급';
-  static const String advanced = '고급';
+  static const String advanced = '상급';
 
   // 버튼
   static const String generateWod = 'WOD 생성';

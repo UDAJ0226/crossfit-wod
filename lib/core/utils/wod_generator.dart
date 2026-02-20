@@ -165,9 +165,9 @@ class WodGenerator {
       );
     }).toList();
 
-    // Tabata: 각 운동당 8라운드, 20초 운동 + 10초 휴식
-    const rounds = 8;
-    const durationPerExercise = (20 + 10) * rounds ~/ 60; // 분
+    // Tabata: 난이도별 라운드 수 (초급 max4, 중급 max6, 상급 max8)
+    final rounds = _getCoreTabataRounds(difficulty);
+    final durationPerExercise = (20 + 10) * rounds ~/ 60; // 분
     final totalDuration = durationPerExercise * selectedExercises.length;
 
     return Wod(
@@ -179,6 +179,18 @@ class WodGenerator {
       rounds: rounds,
       createdAt: DateTime.now(),
     );
+  }
+
+  /// 코어 Tabata 난이도별 라운드 수
+  int _getCoreTabataRounds(Difficulty difficulty) {
+    switch (difficulty) {
+      case Difficulty.beginner:
+        return [3, 4][_random.nextInt(2)];
+      case Difficulty.intermediate:
+        return [4, 5, 6][_random.nextInt(3)];
+      case Difficulty.advanced:
+        return [6, 7, 8][_random.nextInt(3)];
+    }
   }
 
   /// 코어 EMOM 생성
@@ -207,8 +219,8 @@ class WodGenerator {
       );
     }).toList();
 
-    // EMOM: 운동 개수에 맞춰 총 시간 설정 (3개 운동 x 4세트 = 12분)
-    final duration = count * 4; // 4세트 기준
+    // EMOM: 난이도별 총 시간 (초급 max6분, 중급 max9분, 상급 max12분)
+    final duration = _getCoreEmomDuration(difficulty);
 
     return Wod(
       id: _uuid.v4(),
@@ -219,6 +231,18 @@ class WodGenerator {
       rounds: duration,
       createdAt: DateTime.now(),
     );
+  }
+
+  /// 코어 EMOM 난이도별 총 시간 (분)
+  int _getCoreEmomDuration(Difficulty difficulty) {
+    switch (difficulty) {
+      case Difficulty.beginner:
+        return [4, 5, 6][_random.nextInt(3)];
+      case Difficulty.intermediate:
+        return [7, 8, 9][_random.nextInt(3)];
+      case Difficulty.advanced:
+        return [10, 11, 12][_random.nextInt(3)];
+    }
   }
 
   /// 코어 EMOM용 반복 횟수
@@ -429,9 +453,39 @@ class WodGenerator {
     return repsOptions[_random.nextInt(repsOptions.length)];
   }
 
+  /// 케틀벨 운동 ID 목록
+  static const List<String> kettlebellExerciseIds = [
+    'kb_swing',
+    'american_kb_swing',
+  ];
+
   double? _getWeight(Exercise exercise, Difficulty difficulty) {
     if (exercise.category != ExerciseCategory.weightlifting) {
       return null;
+    }
+
+    // Wall Ball Shot (lbs)
+    if (exercise.id == 'wall_ball') {
+      switch (difficulty) {
+        case Difficulty.beginner:
+          return [6, 8, 10][_random.nextInt(3)].toDouble();
+        case Difficulty.intermediate:
+          return [10, 12, 15][_random.nextInt(3)].toDouble();
+        case Difficulty.advanced:
+          return [14, 16, 20][_random.nextInt(3)].toDouble();
+      }
+    }
+
+    // 케틀벨 운동 (kg)
+    if (kettlebellExerciseIds.contains(exercise.id)) {
+      switch (difficulty) {
+        case Difficulty.beginner:
+          return [12, 16, 20][_random.nextInt(3)].toDouble();
+        case Difficulty.intermediate:
+          return [16, 20, 24][_random.nextInt(3)].toDouble();
+        case Difficulty.advanced:
+          return [20, 24, 32][_random.nextInt(3)].toDouble();
+      }
     }
 
     // 운동별 기본 무게 (남성 기준, lbs)
