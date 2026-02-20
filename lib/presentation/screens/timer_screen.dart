@@ -115,9 +115,11 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
   Widget build(BuildContext context) {
     final timerState = ref.watch(timerProvider);
     final isReady = timerState.status == TimerStatus.ready;
+    final isRunning = timerState.status == TimerStatus.running;
     final isEmomOrTabataRunning = (widget.wod.type == WodType.emom ||
-                                    widget.wod.type == WodType.tabata) &&
-                                   timerState.status == TimerStatus.running;
+                                    widget.wod.type == WodType.tabata) && isRunning;
+    final isAmrapRunning = widget.wod.type == WodType.amrap && isRunning;
+    final isForTimeRunning = widget.wod.type == WodType.forTime && isRunning;
     final showRestOverlay = isEmomOrTabataRunning && timerState.isResting;
 
     return PopScope(
@@ -221,12 +223,37 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
               ),
             ),
 
+            // AMRAP 전체화면 오버레이
+            if (isAmrapRunning && widget.wod.exercises.isNotEmpty)
+              _AmrapFullscreenOverlay(
+                wod: widget.wod,
+                timerState: timerState,
+                typeColor: _typeColor,
+                amrapRounds: _amrapRounds,
+                onAddRound: () {
+                  setState(() => _amrapRounds++);
+                  _playBeep();
+                },
+                onPause: () => ref.read(timerProvider.notifier).pause(),
+              ),
+
+            // For Time 전체화면 오버레이
+            if (isForTimeRunning && widget.wod.exercises.isNotEmpty)
+              _ForTimeFullscreenOverlay(
+                wod: widget.wod,
+                timerState: timerState,
+                typeColor: _typeColor,
+                onPause: () => ref.read(timerProvider.notifier).pause(),
+                onComplete: () => _handleComplete(context, timerState),
+              ),
+
             // EMOM/Tabata 전체화면 오버레이 (운동 중)
             if (isEmomOrTabataRunning && widget.wod.exercises.isNotEmpty)
               _EmomTabataFullscreenOverlay(
                 wod: widget.wod,
                 timerState: timerState,
                 typeColor: _typeColor,
+                onPause: () => ref.read(timerProvider.notifier).pause(),
               ),
 
             // Ready 카운트다운 오버레이
@@ -322,16 +349,410 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
   }
 }
 
+/// AMRAP 전체화면 오버레이
+class _AmrapFullscreenOverlay extends StatelessWidget {
+  final Wod wod;
+  final TimerState timerState;
+  final Color typeColor;
+  final int amrapRounds;
+  final VoidCallback onAddRound;
+  final VoidCallback onPause;
+
+  const _AmrapFullscreenOverlay({
+    required this.wod,
+    required this.timerState,
+    required this.typeColor,
+    required this.amrapRounds,
+    required this.onAddRound,
+    required this.onPause,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = timerState.remainingSeconds;
+    final isWarning = remaining <= 10 && remaining > 0;
+
+    return Container(
+      color: Colors.black.withValues(alpha: 0.85),
+      child: SafeArea(
+        child: Column(
+          children: [
+            // 상단: 타입 뱃지 + 일시정지
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: typeColor.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'AMRAP ${wod.duration}분',
+                      style: TextStyle(
+                        color: typeColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: onPause,
+                    icon: const Icon(Icons.pause_circle_outline,
+                        color: AppColors.textSecondary, size: 32),
+                  ),
+                ],
+              ),
+            ),
+
+            // 메인 타이머 (남은 시간)
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isWarning
+                    ? AppColors.warning.withValues(alpha: 0.2)
+                    : typeColor.withValues(alpha: 0.15),
+                border: Border.all(
+                  color: isWarning ? AppColors.warning : typeColor,
+                  width: 4,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  timerState.remainingTimeDisplay,
+                  style: TextStyle(
+                    color: isWarning ? AppColors.warning : AppColors.textPrimary,
+                    fontSize: 52,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 운동 목록 (스크롤)
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: List.generate(wod.exercises.length, (index) {
+                    final ex = wod.exercises[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: typeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: typeColor.withValues(alpha: 0.3),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${index + 1}',
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                ex.displayText,
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
+
+            // 라운드 카운터 (큰 터치 영역)
+            GestureDetector(
+              onTap: onAddRound,
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                decoration: BoxDecoration(
+                  color: typeColor.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: typeColor, width: 3),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      '$amrapRounds',
+                      style: TextStyle(
+                        color: typeColor,
+                        fontSize: 64,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.touch_app, color: typeColor, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          '탭하여 라운드 추가',
+                          style: TextStyle(
+                            color: typeColor.withValues(alpha: 0.8),
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// For Time 전체화면 오버레이
+class _ForTimeFullscreenOverlay extends StatelessWidget {
+  final Wod wod;
+  final TimerState timerState;
+  final Color typeColor;
+  final VoidCallback onPause;
+  final VoidCallback onComplete;
+
+  const _ForTimeFullscreenOverlay({
+    required this.wod,
+    required this.timerState,
+    required this.typeColor,
+    required this.onPause,
+    required this.onComplete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = timerState.remainingSeconds;
+    final isWarning = remaining <= 10 && remaining > 0;
+
+    return Container(
+      color: Colors.black.withValues(alpha: 0.85),
+      child: SafeArea(
+        child: Column(
+          children: [
+            // 상단: 타입 뱃지 + Time Cap + 일시정지
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: typeColor.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'For Time',
+                      style: TextStyle(
+                        color: typeColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Time Cap: ${wod.duration}분',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: onPause,
+                    icon: const Icon(Icons.pause_circle_outline,
+                        color: AppColors.textSecondary, size: 32),
+                  ),
+                ],
+              ),
+            ),
+
+            // 경과 시간 (큰 타이머)
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isWarning
+                    ? AppColors.warning.withValues(alpha: 0.2)
+                    : typeColor.withValues(alpha: 0.15),
+                border: Border.all(
+                  color: isWarning ? AppColors.warning : typeColor,
+                  width: 4,
+                ),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      timerState.elapsedTimeDisplay,
+                      style: TextStyle(
+                        color: isWarning ? AppColors.warning : AppColors.textPrimary,
+                        fontSize: 52,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                    if (wod.rounds != null && wod.rounds! > 1)
+                      Text(
+                        '${wod.rounds}라운드',
+                        style: TextStyle(
+                          color: typeColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 운동 목록 (스크롤)
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: List.generate(wod.exercises.length, (index) {
+                    final ex = wod.exercises[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: typeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: typeColor.withValues(alpha: 0.3),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '${index + 1}',
+                                  style: const TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                ex.displayText,
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
+
+            // 완료 버튼
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: onComplete,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle, size: 28),
+                      SizedBox(width: 12),
+                      Text(
+                        '운동 완료!',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// EMOM/Tabata 전체화면 오버레이
 class _EmomTabataFullscreenOverlay extends StatelessWidget {
   final Wod wod;
   final TimerState timerState;
   final Color typeColor;
+  final VoidCallback onPause;
 
   const _EmomTabataFullscreenOverlay({
     required this.wod,
     required this.timerState,
     required this.typeColor,
+    required this.onPause,
   });
 
   @override
@@ -404,6 +825,11 @@ class _EmomTabataFullscreenOverlay extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       fontFamily: 'monospace',
                     ),
+                  ),
+                  IconButton(
+                    onPressed: onPause,
+                    icon: const Icon(Icons.pause_circle_outline,
+                        color: AppColors.textSecondary, size: 32),
                   ),
                 ],
               ),
